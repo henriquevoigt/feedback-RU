@@ -13,8 +13,8 @@ target/
 .classpath
 .settings/
 nbproject/
+db.properties
 
 # arquivos de sistema
 .DS_Store
 Thumbs.db
-db.properties
