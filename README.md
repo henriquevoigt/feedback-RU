@@ -32,7 +32,7 @@ No banco de dados, nós relacionamos os cardápios do dia (pratos, ingredientes,
 
 1. Certifique-se de estar conectado à rede do **Tailscale** do grupo para alcançar o servidor PostgreSQL (ou rode os scripts da pasta `/sql` em uma instância local do Postgres).
 2. Edite o arquivo `db.properties` na raiz do projeto com o IP do servidor, usuário e senha do banco (ou configure diretamente pelo botão **"Configurar Conexão"** dentro da interface gráfica).
-3. Execute o projeto via sua IDE (rodando a classe `br.edu.ufpel.ru.Main`) ou via terminal com Maven:
+3. Execute o projeto rodando o arquivo `Main.java` na sua IDE pelo terminal com Maven:
    ```bash
    mvn compile exec:java
    ```
