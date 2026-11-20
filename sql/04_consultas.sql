@@ -120,7 +120,42 @@ GROUP BY u.id_usuario, u.nome, a.id_usuario, s.id_usuario, ad.id_usuario
 ORDER BY total_consumos DESC, u.nome;
 
 -- CONSULTA 5 (com join) pedro
--- média de notas e quantidade de avaliações por cardápio, turno e restaurante
-
+-- média de notas e quantidade de avaliações por cardápio, turno e restaurante, com o total de consumos na catraca e a taxa de resposta (avaliações / consumos).
+-- tabelas: consumo, cardapio, oferece, restaurante, feedback (LEFT JOIN em feedback para contar também quem não avaliou)
+ 
+SELECT
+    c.id_cardapio,
+    c.data,
+    c.turno,
+    r.nome AS restaurante,
+    COUNT(co.id_consumo) AS total_consumos,
+    COUNT(f.id_feedback) AS total_avaliacoes,
+    ROUND(100.0 * COUNT(f.id_feedback) / NULLIF(COUNT(co.id_consumo), 0), 1) AS taxa_resposta_pct,
+    ROUND(AVG(f.nota), 2) AS media_nota,
+    MIN(f.nota) AS menor_nota,
+    MAX(f.nota) AS maior_nota
+FROM consumo co
+JOIN cardapio c ON c.id_cardapio = co.id_cardapio
+JOIN oferece o ON o.id_cardapio = c.id_cardapio
+JOIN restaurante r ON r.id_rest = o.id_rest
+LEFT JOIN feedback f ON f.id_consumo = co.id_consumo
+GROUP BY c.id_cardapio, c.data, c.turno, r.nome
+ORDER BY c.data DESC, c.turno, r.nome;
+ 
 -- CONSULTA 6 (com join) pedro
--- análise de satisfação por faixa de horário de entrada na catraca
+-- análise de satisfação por faixa de horário de entrada na catraca (faixas de 30 minutos), para identificar gargalos: horários com mais entradas e notas mais baixas.
+-- tabelas: consumo, cardapio, feedback (LEFT JOIN em feedback para contar também quem não avaliou)
+ 
+SELECT
+    c.turno,
+    TO_CHAR(DATE_TRUNC('hour', co.data_hora_entrada) + FLOOR(EXTRACT(MINUTE FROM co.data_hora_entrada) / 30) * INTERVAL '30 minutes', 'HH24:MI') AS inicio_faixa,
+    COUNT(co.id_consumo) AS total_entradas,
+    COUNT(f.id_feedback) AS total_avaliacoes,
+    ROUND(AVG(f.nota), 2) AS media_nota,
+    COUNT(*) FILTER (WHERE f.nota <= 2) AS avaliacoes_negativas
+FROM consumo co
+JOIN cardapio c ON c.id_cardapio = co.id_cardapio
+LEFT JOIN feedback f ON f.id_consumo = co.id_consumo
+GROUP BY c.turno, inicio_faixa
+ORDER BY c.turno, inicio_faixa;
+ 
