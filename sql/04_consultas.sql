@@ -120,14 +120,20 @@ GROUP BY u.id_usuario, u.nome, a.id_usuario, s.id_usuario, ad.id_usuario
 ORDER BY total_consumos DESC, u.nome;
 
 -- CONSULTA 5 (com join) pedro
--- média de notas e quantidade de avaliações por cardápio, turno e restaurante, com o total de consumos na catraca e a taxa de resposta (avaliações / consumos).
--- tabelas: consumo, cardapio, oferece, restaurante, feedback (LEFT JOIN em feedback para contar também quem não avaliou)
- 
+-- média de notas e quantidade de avaliações por cardápio e turno, com o total de consumos na catraca e a taxa de resposta (avaliações / consumos).
+-- tabelas: consumo, cardapio, feedback, oferece, restaurante (LEFT JOIN em feedback para contar também quem não avaliou)
+-- obs.: consumo não registra em qual restaurante a pessoa entrou, só o cardápio. por isso os restaurantes que oferecem o cardápio aparecem numa coluna de texto (subconsulta), em vez de entrarem no GROUP BY; se entrassem, os mesmos consumos seriam contados uma vez para cada restaurante.
+
 SELECT
     c.id_cardapio,
     c.data,
     c.turno,
-    r.nome AS restaurante,
+    COALESCE((
+        SELECT STRING_AGG(r.nome, ', ' ORDER BY r.nome)
+        FROM oferece o
+        JOIN restaurante r ON r.id_rest = o.id_rest
+        WHERE o.id_cardapio = c.id_cardapio
+    ), 'Nenhum restaurante vinculado') AS restaurantes,
     COUNT(co.id_consumo) AS total_consumos,
     COUNT(f.id_feedback) AS total_avaliacoes,
     ROUND(100.0 * COUNT(f.id_feedback) / NULLIF(COUNT(co.id_consumo), 0), 1) AS taxa_resposta_pct,
@@ -136,12 +142,10 @@ SELECT
     MAX(f.nota) AS maior_nota
 FROM consumo co
 JOIN cardapio c ON c.id_cardapio = co.id_cardapio
-JOIN oferece o ON o.id_cardapio = c.id_cardapio
-JOIN restaurante r ON r.id_rest = o.id_rest
 LEFT JOIN feedback f ON f.id_consumo = co.id_consumo
-GROUP BY c.id_cardapio, c.data, c.turno, r.nome
-ORDER BY c.data DESC, c.turno, r.nome;
- 
+GROUP BY c.id_cardapio, c.data, c.turno
+ORDER BY c.data DESC, c.turno;
+
 -- CONSULTA 6 (com join) pedro
 -- análise de satisfação por faixa de horário de entrada na catraca (faixas de 30 minutos), para identificar gargalos: horários com mais entradas e notas mais baixas.
 -- tabelas: consumo, cardapio, feedback (LEFT JOIN em feedback para contar também quem não avaliou)
