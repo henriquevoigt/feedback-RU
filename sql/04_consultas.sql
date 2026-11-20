@@ -49,11 +49,75 @@ JOIN admin a ON a.id_usuario = c.id_admin
 JOIN usuario u ON u.id_usuario = a.id_usuario
 ORDER BY c.data DESC, c.turno;
 
--- CONSULTA 3 (com join) samuel
--- histórico de consumos (catraca) e respectivos feedbacks dos usuários
+-- CONSULTA 3 (com JOIN) — Samuel
+-- Histórico geral de entradas na catraca e avaliações. O LEFT JOIN
+-- mantém na lista os consumos que ainda não receberam feedback.
+SELECT
+    c.id_consumo,
+    u.id_usuario,
+    u.nome AS usuario,
+    CASE
+        WHEN a.id_usuario IS NOT NULL AND s.id_usuario IS NOT NULL THEN 'Aluno e servidor'
+        WHEN a.id_usuario IS NOT NULL AND ad.id_usuario IS NOT NULL THEN 'Aluno e nutricionista'
+        WHEN a.id_usuario IS NOT NULL THEN 'Aluno'
+        WHEN s.id_usuario IS NOT NULL THEN 'Servidor'
+        WHEN ad.id_usuario IS NOT NULL THEN 'Nutricionista'
+        ELSE 'Usuário'
+    END AS perfil,
+    a.matricula,
+    s.siape,
+    ca.id_cardapio,
+    ca.data AS data_cardapio,
+    ca.turno,
+    c.data_hora_entrada,
+    f.id_feedback,
+    f.nota,
+    f.comentario,
+    f.data_envio,
+    CASE WHEN f.id_feedback IS NULL THEN 'Pendente' ELSE 'Avaliado' END AS situacao_feedback
+FROM consumo AS c
+JOIN usuario AS u ON u.id_usuario = c.id_usuario
+JOIN cardapio AS ca ON ca.id_cardapio = c.id_cardapio
+LEFT JOIN aluno AS a ON a.id_usuario = u.id_usuario
+LEFT JOIN servidor AS s ON s.id_usuario = u.id_usuario
+LEFT JOIN admin AS ad ON ad.id_usuario = u.id_usuario
+LEFT JOIN feedback AS f ON f.id_consumo = c.id_consumo
+ORDER BY c.data_hora_entrada DESC, c.id_consumo DESC;
 
--- CONSULTA 4 samuel
--- consulta de filtragem/agrupamento sobre consumos ou avaliações
+-- CONSULTA 4 — Samuel
+-- Participação individual nas avaliações: quantidade de consumos,
+-- quantidade de feedbacks, percentual de consumos avaliados e média da nota.
+-- Usuários sem consumo também aparecem, com taxa igual a zero.
+SELECT
+    u.id_usuario,
+    u.nome AS usuario,
+    CASE
+        WHEN a.id_usuario IS NOT NULL AND s.id_usuario IS NOT NULL THEN 'Aluno e servidor'
+        WHEN a.id_usuario IS NOT NULL AND ad.id_usuario IS NOT NULL THEN 'Aluno e nutricionista'
+        WHEN a.id_usuario IS NOT NULL THEN 'Aluno'
+        WHEN s.id_usuario IS NOT NULL THEN 'Servidor'
+        WHEN ad.id_usuario IS NOT NULL THEN 'Nutricionista'
+        ELSE 'Usuário'
+    END AS perfil,
+    COUNT(DISTINCT c.id_consumo) AS total_consumos,
+    COUNT(DISTINCT f.id_feedback) AS total_avaliacoes,
+    COALESCE(
+        ROUND(
+            100.0 * COUNT(DISTINCT f.id_feedback)
+            / NULLIF(COUNT(DISTINCT c.id_consumo), 0),
+            2
+        ),
+        0.00
+    ) AS percentual_consumos_avaliados,
+    ROUND(AVG(f.nota), 2) AS media_notas
+FROM usuario AS u
+LEFT JOIN aluno AS a ON a.id_usuario = u.id_usuario
+LEFT JOIN servidor AS s ON s.id_usuario = u.id_usuario
+LEFT JOIN admin AS ad ON ad.id_usuario = u.id_usuario
+LEFT JOIN consumo AS c ON c.id_usuario = u.id_usuario
+LEFT JOIN feedback AS f ON f.id_consumo = c.id_consumo
+GROUP BY u.id_usuario, u.nome, a.id_usuario, s.id_usuario, ad.id_usuario
+ORDER BY total_consumos DESC, u.nome;
 
 -- CONSULTA 5 (com join) pedro
 -- média de notas e quantidade de avaliações por cardápio, turno e restaurante
